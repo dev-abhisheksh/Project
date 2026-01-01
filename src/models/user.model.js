@@ -48,6 +48,20 @@ const userSchema = new mongoose.Schema(
         providerId: {
             type: String,
         },
+
+        refreshTokens: [
+            {
+                tokenHash: {
+                    type: String,
+                    required: true,
+                },
+                expiresAt: {
+                    type: Date,
+                    required: true,
+                },
+            },
+        ],
+
     },
     { timestamps: true }
 );

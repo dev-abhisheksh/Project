@@ -5,7 +5,7 @@ const createProblem = async (req, res) => {
     try {
         let { title, description, category, tags, expertOnly } = req.body;
         if (!title || !description || !category) {
-            return res.status(400).json({ message: "Title , documents and category are required" })
+            return res.status(400).json({ message: "Title , description and category are required" })
         }
 
         title = title.trim()
@@ -51,8 +51,16 @@ const getProblems = async (req, res) => {
         }
 
         if (category) filter.category = category.toLowerCase()
-        if (tags) filter.tags = tags.toLowerCase()
         if (expertOnly !== undefined) filter.expertOnly = expertOnly === "true";
+        if (tags) {
+            const parsedTags = tags
+                .split(",")
+                .map(tag => tag.trim().toLowerCase())
+                .filter(Boolean)
+            if (parsedTags.length) {
+                filter.tags = { $in: parsedTags }
+            }
+        }
 
         const problems = await Problem.find(filter)
             .sort({ createdAt: -1 })

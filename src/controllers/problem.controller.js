@@ -37,7 +37,47 @@ const createProblem = async (req, res) => {
     }
 }
 
+const getProblems = async (req, res) => {
+    try {
+        let { category, tags, expertOnly } = req.query;
+
+        let page = Number(req.query.page) || 1
+        let limit = Number(req.query.limit) || 10
+
+        let skip = (page - 1) * limit
+
+        const filter = {
+            isDeleted: false
+        }
+
+        if (category) filter.category = category.toLowerCase()
+        if (tags) filter.tags = tags.toLowerCase()
+        if (expertOnly !== undefined) filter.expertOnly = expertOnly === "true";
+
+        const problems = await Problem.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate("createdBy", "fullName role")
+
+        const total = await Problem.countDocuments(filter)
+
+        return res.status(200).json({
+            message: "Fetched problems successfully",
+            page,
+            limit,
+            total,
+            results: problems.length,
+            problems
+        })
+
+    } catch (error) {
+        console.error("Failed to fetch problems", error)
+        return res.status(500).json({ message: "Failed to fetch problems" })
+    }
+}
 
 export {
-    createProblem
+    createProblem,
+    getProblems
 }

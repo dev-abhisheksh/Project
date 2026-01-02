@@ -16,12 +16,12 @@ const verifyToken = (req, res, next) => {
       process.env.ACCESS_TOKEN_SECRET
     );
 
-    if (!decoded?.userId) {
+    if (!decoded?._id) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
     req.user = {
-      userId: decoded.userId,
+      _id: decoded._id,
       role: decoded.role,
     };
 

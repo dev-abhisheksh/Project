@@ -6,7 +6,7 @@ import hashToken from "../utils/hashToken.js";
 export const generateAccessToken = (user) => {
     return jwt.sign(
         {
-            userId: user._id,
+            _id: user._id,
             role: user.role,
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -14,15 +14,17 @@ export const generateAccessToken = (user) => {
     );
 };
 
+
 export const generateRefreshToken = (user) => {
     return jwt.sign(
         {
-            userId: user._id,
+            _id: user._id,
         },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: "7d" }
     );
 };
+
 
 
 const registerUser = async (req, res) => {

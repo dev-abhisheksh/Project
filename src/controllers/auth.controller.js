@@ -159,7 +159,7 @@ const refreshAccessToken = async (req, res) => {
         )
 
         const newAccessToken = generateAccessToken(user)
-        const newRefreshToken = generateAccessToken(user)
+        const newRefreshToken = generateRefreshToken(user)
 
         user.refreshTokens.push({
             tokenHash: hashToken(newRefreshToken),
@@ -185,9 +185,37 @@ const refreshAccessToken = async (req, res) => {
     }
 }
 
+const logoutUser = async (req, res) => {
+    try {
+        const refreshToken = req.cookies?.refreshToken;
+        if (!refreshToken) return res.status(204).send()
+
+        const refreshTokenHash = hashToken(refreshToken)
+
+        await User.updateOne(
+            { "refreshTokens.tokenHash": refreshTokenHash },
+            { $pull: { refreshTokens: { tokenHash: refreshTokenHash } } }
+        );
+
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict"
+        })
+
+        return res.status(200).json({
+            message: "Logout successfull"
+        })
+    } catch (error) {
+        console.error("Logout failed", error)
+        return res.status(500).json({ message: "Logout failed" })
+    }
+}
+
 
 export {
     registerUser,
     loginWithPassword,
-    refreshAccessToken
+    refreshAccessToken,
+    logoutUser
 }

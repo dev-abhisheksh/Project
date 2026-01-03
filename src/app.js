@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import cookieParser from "cookie-parser";
 import authRouter from "./routes/auth.route.js"
 import problemRouter from "./routes/problem.route.js"
+import solutionRouter from "./routes/solution.route.js"
 
 dotenv.config();
 
@@ -14,5 +15,6 @@ app.use(cookieParser())
 
 app.use("/api/v1/auth", authRouter)
 app.use("/api/v1/problems", problemRouter)
+app.use("/api/v1/solutions", solutionRouter)
 
 export default app;

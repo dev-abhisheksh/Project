@@ -54,7 +54,36 @@ const createSolution = async (req, res) => {
     }
 }
 
+const acceptSolution = async (req, res) => {
+    const session = await mongoose.startSession()
+    session.startTransaction();
+    try {
+        const solution = await Solution.findById(req.params.solutionId).session(session)
+        if (!solution) throw new Error("Solution not found")
+
+        const problem = await Problem.findById(solution.problemId).session(session)
+        if (!problem || problem.status !== "open") throw new Error("Invalid problem state")
+
+        if (!problem.createdBy.equals(req.user._id) && req.user.role !== "admin") {
+            return res.status(403).json({ message: "Not allowed" })
+        }
+
+        solution.isAccepted = true;
+        problem.status = "solved"
+
+        await Promise.all([solution.save({ session }), problem.save({ session })])
+        await session.commitTransaction()
+
+        return res.status(200).json({ message: "Solution accepted" });
+    } catch (error) {
+        await session.abortTransaction()
+        return res.status(400).json({ message: error.message })
+    } finally {
+        session.endSession()
+    }
+}
 
 export {
-    createSolution
+    createSolution,
+    acceptSolution
 }

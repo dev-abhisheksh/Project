@@ -83,7 +83,34 @@ const acceptSolution = async (req, res) => {
     }
 }
 
+const allSolutionsOfProblem = async (req, res) => {
+    try {
+        const { problemId } = req.params;
+        if (!problemId) return res.status(400).json({ message: "Problem ID is required" })
+        if (!mongoose.Types.ObjectId.isValid(problemId)) {
+            return res.status(400).json({ message: "Invalid problemID" })
+        }
+
+        const problem = await Problem.findById(problemId)
+        if (!problem) return res.status(404).json({ message: "Problem not found" })
+
+        const solutions = await Solution.find({ problemId, isDeleted: false })
+            .populate("answeredBy", "fullName role")
+            .sort({ isAccepted: -1, createdAt: -1 })
+            .select("-__v")
+
+        return res.status(200).json({
+            message: `Fetched all solutions for problem : ${problem?.title}`,
+            solutions
+        })
+    } catch (error) {
+        console.error("Failed to fetch solutions", error)
+        return res.status(500).json({ message: "Failed to fetch solutions" })
+    }
+}
+
 export {
     createSolution,
-    acceptSolution
+    acceptSolution,
+    allSolutionsOfProblem
 }

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Problem } from "../models/problem.model.js";
 import { Solution } from "../models/solution.model.js";
+import { addReputationEvent } from "../services/reputation.service.js";
 
 
 const createSolution = async (req, res) => {
@@ -109,8 +110,35 @@ const allSolutionsOfProblem = async (req, res) => {
     }
 }
 
+const reportSolution = async (req, res) => {
+    try {
+        const { solutionId } = req.params;
+        if (!solutionId || !type) return res.status(400).json({ message: "Solution ID is required" })
+        if (!mongoose.Types.ObjectId.isValid(solutionId)) {
+            return res.status(400).json({ message: "Invalid Soltion ID" })
+        }
+
+        const solution = await Solution.findById(solutionId)
+        if (!solution) return res.status(404).json({ message: "solution not found" })
+
+        if (solution?.answeredBy.equals(req.user._id)) {
+            return res.status(400).json({ message: "Cannot report your own solution" })
+        }
+
+        await addReputationEvent({ userId: req.user._id, solutionId, type: "reported" })
+
+        return res.status(200).json({
+            message: "Operation successful",
+        })
+    } catch (error) {
+        console.error("Operation failed", error)
+        return res.status(500).json({ message: "Operation failed" })
+    }
+}
+
 export {
     createSolution,
     acceptSolution,
-    allSolutionsOfProblem
+    allSolutionsOfProblem,
+    reportSolution
 }

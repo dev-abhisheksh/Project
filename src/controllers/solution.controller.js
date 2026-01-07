@@ -37,9 +37,10 @@ const createSolution = async (req, res) => {
         const solution = await Solution.create({
             answer,
             problemId,
-            answeredBy: req.user?._id,
-
+            answeredBy: req.user._id,
         })
+
+        await addReputationEvent({ userId: req.user._id, solutionId: solution._id, type: "commented" })
 
         return res.status(201).json({
             message: "Solution created successfully",

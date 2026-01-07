@@ -1,5 +1,5 @@
-import { Reputation } from "../models/reputation.model";
-import { User } from "../models/user.model";
+import { Reputation } from "../models/reputation.model.js";
+import { User } from "../models/user.model.js";
 
 const POINTS_MAP = {
     commented: 1,

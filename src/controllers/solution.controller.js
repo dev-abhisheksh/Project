@@ -62,6 +62,11 @@ const acceptSolution = async (req, res) => {
         const solution = await Solution.findById(req.params.solutionId).session(session)
         if (!solution) throw new Error("Solution not found")
 
+        if (solution.isAccepted) return res.status(400).json({ message: "Solution is alreay accepted" })
+        if (solution.answeredBy.equals(req.user._id)) {
+            return res.status(400).json({ message: "Can accept your answer" })
+        }
+
         const problem = await Problem.findById(solution.problemId).session(session)
         if (!problem || problem.status !== "open") throw new Error("Invalid problem state")
 
@@ -74,6 +79,8 @@ const acceptSolution = async (req, res) => {
 
         await Promise.all([solution.save({ session }), problem.save({ session })])
         await session.commitTransaction()
+
+        await addReputationEvent({ userId: solution.answeredBy, solutionId: req.params.solutionId, type: "solution_accepted" })
 
         return res.status(200).json({ message: "Solution accepted" });
     } catch (error) {
@@ -135,6 +142,7 @@ const reportSolution = async (req, res) => {
         return res.status(500).json({ message: "Operation failed" })
     }
 }
+
 
 export {
     createSolution,

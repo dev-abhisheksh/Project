@@ -5,8 +5,8 @@ import { acceptSolution, allSolutionsOfProblem, createSolution, reportSolution }
 
 const router = express.Router()
 
-router.post("/create/:problemId", verifyToken, authorizeRoles("admin", "expert"), createSolution)
-router.patch("/accept/:solutionId", verifyToken, authorizeRoles("expert"), acceptSolution)
+router.post("/create/:problemId", verifyToken, createSolution)
+router.patch("/accept/:solutionId", verifyToken, acceptSolution)
 router.get("/:problemId", verifyToken, allSolutionsOfProblem)
 router.post("/:solutionId/report", verifyToken, reportSolution)
 

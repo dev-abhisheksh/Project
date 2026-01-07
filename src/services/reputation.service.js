@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js";
 const POINTS_MAP = {
     commented: 1,
     solution_accepted: 5,
-    reported: -1
+    reported: -5
 }
 
 export const addReputationEvent = async ({ userId, solutionId, type }) => {

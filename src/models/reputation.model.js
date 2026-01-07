@@ -10,7 +10,7 @@ const reputationSchema = new mongoose.Schema({
 
     type: {
         type: String,
-        enum: ["solution_accepted", "like", "abuse"],
+        enum: ["solution_accepted", "commented", "reported"],
         required: true
     },
 

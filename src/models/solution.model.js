@@ -10,13 +10,15 @@ const solutionSchema = new mongoose.Schema({
     problemId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Problem",
-        required: true
+        required: true,
+        index: true
     },
 
     answeredBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: true,
+        index: true
     },
 
     isAccepted: {
@@ -35,11 +37,21 @@ const solutionSchema = new mongoose.Schema({
     },
 
     votes: {
-        upvotes: { type: Number, default: 0 },
-        downvotes: { type: Number, default: 0 }
+        upvotes: {
+            type: Number,
+            default: 0
+        }
     }
-}, { timestamps: true })
+}, { timestamps: true });
 
-solutionSchema.index({ problemId: 1, answeredBy: 1 }, { unique: true })
+solutionSchema.index(
+    { problemId: 1, answeredBy: 1 },
+    { unique: true }
+)
 
-export const Solution = mongoose.model("Solution", solutionSchema)  
+solutionSchema.index(
+    { problemId: 1 },
+    { unique: true, partialFilterExpression: { isAccepted: true } }
+);
+
+export const Solution = mongoose.model("Solution", solutionSchema);

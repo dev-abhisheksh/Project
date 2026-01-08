@@ -15,7 +15,8 @@ const problemSchema = new mongoose.Schema({
 
     category: {
         type: String,
-        required: true
+        required: true,
+        index: true
     },
 
     tags: [
@@ -28,18 +29,21 @@ const problemSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        required: true,
+        index: true
     },
 
     expertOnly: {
         type: Boolean,
-        default: false
+        default: false,
+        immutable: true
     },
 
     status: {
         type: String,
         enum: ["open", "solved", "closed"],
-        default: "open"
+        default: "open",
+        index: true
     },
 
     views: {
@@ -49,7 +53,8 @@ const problemSchema = new mongoose.Schema({
 
     isDeleted: {
         type: Boolean,
-        default: false
+        default: false,
+        index: true
     }
 }, { timestamps: true })
 

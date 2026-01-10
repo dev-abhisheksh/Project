@@ -2,10 +2,11 @@ import express from "express";
 import verifyToken from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/roles.middleware.js";
 import { acceptSolution, allSolutionsOfProblem, createSolution, reportSolution } from "../controllers/solution.controller.js";
+import { aiModeration } from "../middlewares/aiModeration.middleware.js";
 
 const router = express.Router()
 
-router.post("/create/:problemId", verifyToken, createSolution)
+router.post("/create/:problemId", verifyToken, aiModeration, createSolution)
 router.patch("/accept/:solutionId", verifyToken, acceptSolution)
 router.get("/:problemId", verifyToken, allSolutionsOfProblem)
 router.post("/:solutionId/report", verifyToken, reportSolution)

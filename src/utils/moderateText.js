@@ -50,7 +50,6 @@ TEXT:
 
         return output.includes("BLOCK") ? "BLOCK" : "ALLOW";
     } catch (err) {
-        // FAIL-OPEN by design
         return "ALLOW";
     } finally {
         clearTimeout(timeout);

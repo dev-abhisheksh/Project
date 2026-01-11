@@ -29,6 +29,12 @@ const userSchema = new mongoose.Schema(
             default: "user",
         },
 
+        expertTags: {
+            type: [String],
+            default: [],
+            index: true
+        },
+
         reputationPoints: {
             type: Number,
             default: 0,

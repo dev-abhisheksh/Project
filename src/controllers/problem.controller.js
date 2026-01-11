@@ -1,3 +1,4 @@
+import { Notification } from "../models/notification.model";
 import { Problem } from "../models/problem.model.js ";
 
 
@@ -26,6 +27,27 @@ const createProblem = async (req, res) => {
             expertOnly: expertOnly === true,
             createdBy: req.user._id
         })
+
+        if (normalizedTags.length > 0) {
+            try {
+                const experts = await User.find({
+                    role: "expert",
+                    expertTags: { $in: normalizedTags }
+                }).select("_id")
+
+                if (experts.length > 0) {
+                    const notifications = experts.map(expert => ({
+                        userId: expert._id,
+                        problemId: problem._id,
+                        message: "A new problem was posted related to ypur expertise"
+                    }))
+
+                    await Notification.insertMany(notifications)
+                }
+            } catch (error) {
+                console.error("Failed to create notifications", error)
+            }
+        }
 
         return res.status(201).json({
             message: "Problem created successfully",

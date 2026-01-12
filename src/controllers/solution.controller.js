@@ -57,6 +57,7 @@ const createSolution = async (req, res) => {
     }
 }
 
+//using automacity ,if one operation fails all falls back gracefully
 const acceptSolution = async (req, res) => {
     const session = await mongoose.startSession()
     session.startTransaction();

@@ -33,6 +33,7 @@ const reputationRanking = async (req, res) => {
         { $sort: { totalPoints: -1 } },
 
         {
+            //connects both the tables
             $lookup: {
                 from: "users",
                 localField: "_id",
@@ -44,6 +45,7 @@ const reputationRanking = async (req, res) => {
         { $unwind: "$user" },
 
         {
+            //gives out new documents or data of the combined tables
             $project: {
                 userId: "$_id",
                 totalPoints: 1,

@@ -31,15 +31,10 @@ const createProblem = async (req, res) => {
 
         if (normalizedTags.length > 0) {
             try {
-                console.log("Normalized tags:", normalizedTags);
-
                 const experts = await User.find({
                     role: "expert",
                     expertTags: { $in: normalizedTags }
                 }).select("_id expertTags");
-
-                console.log("Matched experts:", experts);
-
 
                 if (experts.length > 0) {
                     const notifications = experts.map(expert => ({
@@ -54,8 +49,6 @@ const createProblem = async (req, res) => {
                 console.error("Failed to create notifications", error)
             }
         }
-        console.log("DB NAME:", mongoose.connection.name);
-
 
         return res.status(201).json({
             message: "Problem created successfully",

@@ -169,9 +169,35 @@ const deleteProblem = async (req, res) => {
     }
 }
 
+const toggleDeleteProblemVisibility = async (req, res) => {
+    try {
+        const { problemId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(problemId)) {
+            return res.status(400).json({ message: "Invalid Problem ID" })
+        }
+
+        if (req.user.role !== "admin") return res.status(403).json({ message: "Only Admins can toggle visibility" })
+
+        const problem = await Problem.findById(problemId)
+        if (!problem) return res.status(404).json({ message: "Problem not found" })
+
+        problem.isDeleted = !problem.isDeleted
+        await problem.save()
+
+        return res.status(200).json({
+            message: `Problem ${problem.isDeleted ? "Hidden" : "Visible"} successfully`,
+            problem
+        })
+    } catch (error) {
+        console.error("Failed to toggle problem visibility", error)
+        return res.status(500).json({ message: "Failed to toggle problem visibility" })
+    }
+}
+
 export {
     createProblem,
     getProblems,
     getProblemById,
-    deleteProblem
+    deleteProblem,
+    toggleDeleteProblemVisibility
 }

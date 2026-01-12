@@ -115,7 +115,8 @@ const loginWithPassword = async (req, res) => {
         return res.status(200).json({
             message: "Login successful",
             accessToken,
-            fullName: existingUser.fullName
+            fullName: existingUser.fullName,
+            role: existingUser.role
         });
     } catch (error) {
         console.error("Failed to login user:", error);

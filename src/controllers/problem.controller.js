@@ -108,7 +108,38 @@ const getProblems = async (req, res) => {
     }
 }
 
+const getProblemById = async (req, res) => {
+    try {
+        const { problemId } = req.params;
+        if (!problemId) return res.status(400).json({ message: "Problem ID is required" })
+        if (!mongoose.Types.ObjectId.isValid(problemId)) {
+            return res.status(400).json({ message: "Invalid Problem ID" })
+        }
+
+        const problem = await Problem.findOne({
+            _id: problemId,
+            isDeleted: false
+        })
+        if (!problem) return res.status(404).json({ message: "Problem not foundF" })
+
+        await Problem.updateOne(
+            { _id: problemId },
+            { $inc: { views: 1 } }
+        )
+
+        return res.status(200).json({
+            message: "Problem fetched successfully",
+            problem
+        })
+
+    } catch (error) {
+        console.error("Failed to fetch problem", error)
+        return res.status(500).json({ message: "Failed to fetch problem" })
+    }
+}
+
 export {
     createProblem,
-    getProblems
+    getProblems,
+    getProblemById
 }

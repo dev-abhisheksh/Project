@@ -26,6 +26,36 @@ const getNotifications = async (req, res) => {
     }
 }
 
+const readNotifications = async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+            return res.status(400).json({ message: "Invalid notificationID" })
+        }
+
+        const notification = await Notification.findOneAndUpdate(
+            {
+                _id: notificationId,
+                userId: req.user._id
+            },
+            { $set: { isRead: true } },
+            { new: true }
+        )
+
+        if (!notification) return res.status(404).json({ message: "Notification not found" })
+
+
+        return res.status(200).json({
+            message: "Message marked as read",
+            notification
+        })
+    } catch (error) {
+        console.log("Failed to mark notification as read", error)
+        return res.status(500).json({ message: "Failed to read notifications" })
+    }
+}
+
 export {
-    getNotifications
+    getNotifications,
+    readNotifications
 }

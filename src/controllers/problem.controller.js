@@ -217,10 +217,36 @@ const toggleDeleteProblemVisibility = async (req, res) => {
     }
 }
 
+const getMyProblems = async (req, res) => {
+    try {
+        const problems = await Problem.find({
+            createdBy: req.user._id,
+            isDeleted: false
+        }).sort({ createdAt: -1 })
+
+        if (problems.length === 0) {
+            return res.status(200).json({
+                message: "Fetched your problems",
+                problems: []
+            })
+        }
+
+        return res.status(200).json({
+            message: "Fetched your problems",
+            count: problems.length,
+            problems
+        })
+    } catch (error) {
+        console.error("Failed to fetch your problems", error)
+        return res.status(500).json({ message: "Failed to fetch your problems" })
+    }
+}
+
 export {
     createProblem,
     getProblems,
     getProblemById,
     deleteProblem,
-    toggleDeleteProblemVisibility
+    toggleDeleteProblemVisibility,
+    getMyProblems
 }

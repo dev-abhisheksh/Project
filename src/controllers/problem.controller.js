@@ -2,6 +2,7 @@ import { Notification } from "../models/notification.model.js";
 import { Problem } from "../models/problem.model.js ";
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
 const createProblem = async (req, res) => {
     try {
@@ -10,15 +11,36 @@ const createProblem = async (req, res) => {
             return res.status(400).json({ message: "Title , description and category are required" })
         }
 
+        let bannerImage = null;
+
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file.buffer);
+                bannerImage = uploadResult.secure_url;
+            } catch (err) {
+                console.error("CLOUDINARY UPLOAD FAILED:", err);
+            }
+        }
+
+
         title = title.trim()
         description = description.trim()
         category = category.trim().toLowerCase()
 
+        if (tags) {
+            try {
+                tags = JSON.parse(tags);
+            } catch (err) {
+                return res.status(400).json({ message: "Tags must be a valid JSON array" });
+            }
+        }
+
         if (tags && !Array.isArray(tags)) {
-            return res.status(400).json({ message: "Tags must be an array" })
+            return res.status(400).json({ message: "Tags must be an array" });
         }
 
         const normalizedTags = tags ? tags.map(tag => tag.trim().toLowerCase()) : [];
+        console.log("FINAL bannerImage value:", bannerImage);
 
         const problem = await Problem.create({
             title,
@@ -26,7 +48,8 @@ const createProblem = async (req, res) => {
             category,
             tags: normalizedTags,
             expertOnly: expertOnly === true,
-            createdBy: req.user._id
+            createdBy: req.user._id,
+            bannerImage
         })
 
         if (normalizedTags.length > 0) {

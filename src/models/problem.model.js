@@ -39,6 +39,12 @@ const problemSchema = new mongoose.Schema({
         immutable: true
     },
 
+    bannerImage: {
+        type: String,
+        default: null
+    },
+
+
     status: {
         type: String,
         enum: ["open", "solved", "closed"],

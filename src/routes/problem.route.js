@@ -2,10 +2,11 @@ import express from "express"
 import verifyToken from "../middlewares/auth.middleware.js"
 import authorizeRoles from "../middlewares/roles.middleware.js"
 import { createProblem, deleteProblem, getProblemById, getProblems, toggleDeleteProblemVisibility } from "../controllers/problem.controller.js"
+import { upload } from "../middlewares/upload.moddleware.js"
 
 const router = express.Router()
 
-router.post("/create", verifyToken, createProblem)
+router.post("/create", verifyToken, upload.single("bannerImage"), createProblem)
 router.get("/", verifyToken, getProblems)
 router.get("/:problemId", verifyToken, getProblemById)
 router.patch("/delete/:problemId", verifyToken, deleteProblem)

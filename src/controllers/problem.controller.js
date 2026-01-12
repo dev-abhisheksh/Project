@@ -138,8 +138,40 @@ const getProblemById = async (req, res) => {
     }
 }
 
+const deleteProblem = async (req, res) => {
+    try {
+        const { problemId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(problemId)) {
+            return res.status(400).json({ message: "Invalid Problem ID" })
+        }
+
+        const problem = await Problem.findOneAndUpdate(
+            {
+                _id: problemId,
+                createdBy: req.user._id,
+                isDeleted: false
+            },
+            {
+                $set: { isDeleted: true }
+            },
+            { new: true }
+        )
+
+        if (!problem) return res.status(404).json({ message: "Problem not found or already deleted" })
+
+        return res.status(200).json({
+            message: "Problem Deleted successfully",
+            problem
+        })
+    } catch (error) {
+        console.error("Failed to delete problem")
+        return res.status(500).json({ message: "Failed to delete problem" })
+    }
+}
+
 export {
     createProblem,
     getProblems,
-    getProblemById
+    getProblemById,
+    deleteProblem
 }

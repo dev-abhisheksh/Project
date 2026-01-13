@@ -116,7 +116,8 @@ const loginWithPassword = async (req, res) => {
             message: "Login successful",
             accessToken,
             fullName: existingUser.fullName,
-            role: existingUser.role
+            role: existingUser.role,
+            Pro: existingUser.isPro
         });
     } catch (error) {
         console.error("Failed to login user:", error);

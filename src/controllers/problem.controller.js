@@ -242,11 +242,49 @@ const getMyProblems = async (req, res) => {
     }
 }
 
+// ------------------------------------ PRO USER ----------------------------------------
+
+const togglePinProblem = async (req, res) => {
+    try {
+        const { problemId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(problemId)) {
+            return res.status(400).json({ message: "Invalid Problem ID" })
+        }
+
+        if (!req.user.isPro) {
+            return res.status(403).json({ message: "Only Pro users can access this privilege" })
+        }
+
+        const problem = await Problem.findOne({
+            _id: problemId,
+            isDeleted: false
+        })
+        if (!problem) return res.status(404).json({ message: "Problem not found or deleted" })
+
+        if (problem.createdBy.toString() !== req.user._id) {
+            return res.status(403).json({ message: "You doent own this problem" })
+        }
+
+        problem.isPinned = !problem.isPinned
+        await problem.save()
+
+        return res.status(200).json({
+            message: `The problem is ${problem.isPinned ? "Pinned" : "Unpinned"}`,
+            problem
+        })
+
+    } catch (error) {
+        console.error("Failed to toggle Problem Pin", error)
+        return res.status(500).json({ message: "Failed to toggle Problem Pin" })
+    }
+}
+
 export {
     createProblem,
     getProblems,
     getProblemById,
     deleteProblem,
     toggleDeleteProblemVisibility,
-    getMyProblems
+    getMyProblems,
+    togglePinProblem
 }

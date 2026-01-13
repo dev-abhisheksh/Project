@@ -61,6 +61,11 @@ const problemSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
         index: true
+    },
+
+    isPinned: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true })
 

@@ -68,6 +68,16 @@ const userSchema = new mongoose.Schema(
             },
         ],
 
+        isPro: {
+            type: Boolean,
+            default: false
+        },
+
+        proExpiresAt: {
+            type: Date,
+            default: null
+        }
+
     },
     { timestamps: true }
 );

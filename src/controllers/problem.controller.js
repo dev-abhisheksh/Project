@@ -279,6 +279,26 @@ const togglePinProblem = async (req, res) => {
     }
 }
 
+const getPinnedProblems = async (req, res) => {
+    try {
+        const pinnedProblems = await Problem.find({
+            isDeleted: false,
+            isPinned: true
+        })
+            .populate("createdBy", "fullName role email")
+            .sort({ createdAt: -1 })
+            .lean()
+
+        return res.status(200).json({
+            message: "Fetched all pinned problems",
+            pinnedProblems
+        })
+    } catch (error) {
+        console.error("Failed to fetch pinned Problems", error)
+        return res.status(500).json({ message: "Failed to fetch pinned Problems" })
+    }
+}
+
 export {
     createProblem,
     getProblems,
@@ -286,5 +306,6 @@ export {
     deleteProblem,
     toggleDeleteProblemVisibility,
     getMyProblems,
-    togglePinProblem
+    togglePinProblem,
+    getPinnedProblems
 }

@@ -1,6 +1,6 @@
 import { Redemption } from "../models/redemption.model.js";
 import { Reputation } from "../models/reputation.model.js";
-
+import mongoose from "mongoose";
 
 
 const requestRedemption = async (req, res) => {
@@ -12,7 +12,7 @@ const requestRedemption = async (req, res) => {
             return res.status()
         }
 
-        const userId = req.user._id;
+        const userId = new mongoose.Types.ObjectId(req.user._id)
 
         const pending = await Redemption.findOne({
             userId,

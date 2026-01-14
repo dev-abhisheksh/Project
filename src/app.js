@@ -8,6 +8,7 @@ import voteRouter from "./routes/vote.route.js"
 import reputationRouter from "./routes/reputation.route.js"
 import notificationRouter from "./routes/notification.route.js"
 import redemptionRouter from "./routes/redemption.route.js"
+import userRouter from "./routes/user.route.js"
 
 dotenv.config();
 
@@ -24,5 +25,6 @@ app.use("/api/v1/votes", voteRouter)
 app.use("/api/v1/reputations", reputationRouter)
 app.use("/api/v1/notifications", notificationRouter)
 app.use("/api/v1/redemptions", redemptionRouter)
+app.use("/api/v1/users", userRouter)
 
 export default app;

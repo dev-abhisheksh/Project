@@ -251,7 +251,10 @@ const togglePinProblem = async (req, res) => {
             return res.status(400).json({ message: "Invalid Problem ID" })
         }
 
-        if (!req.user.isPro) {
+        const user = await User.findById(req.user?._id)
+
+        // console.log(user.isPro)
+        if (!user.isPro) {
             return res.status(403).json({ message: "Only Pro users can access this privilege" })
         }
 
@@ -291,6 +294,7 @@ const getPinnedProblems = async (req, res) => {
 
         return res.status(200).json({
             message: "Fetched all pinned problems",
+            count: pinnedProblems.length,
             pinnedProblems
         })
     } catch (error) {

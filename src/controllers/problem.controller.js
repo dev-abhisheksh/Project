@@ -10,31 +10,30 @@ const createProblem = async (req, res) => {
     try {
         let { title, description, expertOnly } = req.body;
         if (!title || !description) {
-            return res.status(400).json({ message: "Title , description and category are required" })
+            return res.status(400).json({ message: "Title and description are required" });
         }
 
         let bannerImage = null;
-
         if (req.file) {
-            try {
-                const uploadResult = await uploadToCloudinary(req.file.buffer);
-                bannerImage = uploadResult.secure_url;
-            } catch (err) {
-                console.error("CLOUDINARY UPLOAD FAILED:", err);
-            }
+            const uploadResult = await uploadToCloudinary(req.file.buffer);
+            bannerImage = uploadResult.secure_url;
         }
 
+        title = title.trim();
+        description = description.trim();
 
-        title = title.trim()
-        description = description.trim()
+        let category = await generateCategoryWithAi({ title, description });
+        category = category.trim().toLowerCase();
 
-        const tags = await generateTagsWithAI({ title, description })
-        const normalizedTags = tags.map(t => t.trim().toLowerCase());
+        let tags = await generateTagsWithAI({ title, description, category });
 
-        console.log("TAgs : ", normalizedTags)
-
-        let category = await generateCategoryWithAi({ title, description })
-        category = category.trim().toLowerCase()
+        const normalizedTags = [
+            ...new Set(
+                tags
+                    .map(t => t.toLowerCase().trim())
+                    .filter(t => !t.includes(" "))
+            )
+        ];
 
         const problem = await Problem.create({
             title,
@@ -44,38 +43,37 @@ const createProblem = async (req, res) => {
             expertOnly: expertOnly === true,
             createdBy: req.user._id,
             bannerImage
-        })
+        });
 
-        if (normalizedTags.length > 0) {
-            try {
-                const experts = await User.find({
-                    role: "expert",
-                    expertTags: { $in: normalizedTags }
-                }).select("_id expertTags");
+        const experts = await User.find({
+            role: "expert",
+            $or: [
+                { expertCategories: category },
+                { expertTags: { $in: normalizedTags } }
+            ]
+        }).select("_id");
 
-                if (experts.length > 0) {
-                    const notifications = experts.map(expert => ({
-                        userId: expert._id,
-                        problemId: problem._id,
-                        message: "A new problem was posted related to ypur expertise"
-                    }))
-
-                    await Notification.insertMany(notifications)
-                }
-            } catch (error) {
-                console.error("Failed to create notifications", error)
-            }
+        if (experts.length > 0) {
+            await Notification.insertMany(
+                experts.map(expert => ({
+                    userId: expert._id,
+                    problemId: problem._id,
+                    message: "A new problem was posted related to your expertise"
+                }))
+            );
         }
 
         return res.status(201).json({
             message: "Problem created successfully",
             problem
-        })
+        });
+
     } catch (error) {
-        console.error("Failed to create problem", error)
-        return res.status(500).json({ message: "Failed to create problem" })
+        console.error("Failed to create problem", error);
+        return res.status(500).json({ message: "Failed to create problem" });
     }
-}
+};
+
 
 const getProblems = async (req, res) => {
     try {

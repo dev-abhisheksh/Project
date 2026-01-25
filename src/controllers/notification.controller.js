@@ -4,10 +4,6 @@ import mongoose from "mongoose";
 
 const getNotifications = async (req, res) => {
     try {
-        console.log("REQ.USER:", req.user);
-        console.log("DB NAME:", mongoose.connection.name);
-
-        // console.log(req.user.role)
         if (req.user.role !== "expert") {
             return res.status(403).json({ message: "Only Experts can view notifications" })
         }

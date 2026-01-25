@@ -47,10 +47,7 @@ const createProblem = async (req, res) => {
 
         const experts = await User.find({
             role: "expert",
-            $or: [
-                { expertCategories: category },
-                { expertTags: { $in: normalizedTags } }
-            ]
+            expertCategories: category
         }).select("_id");
 
         if (experts.length > 0) {

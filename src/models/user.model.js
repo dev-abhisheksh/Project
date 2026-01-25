@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
             default: null
         },
 
-        expertTags: {
+        expertCategories: {
             type: [String],
             default: [],
             index: true

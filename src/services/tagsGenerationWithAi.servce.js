@@ -1,16 +1,18 @@
 const MODEL_NAME = "gemini-2.5-flash-lite";
 const API_VERSION = "v1beta";
 
-export const generateTagsWithAI = async ({ title, description }) => {
+export const generateTagsWithAI = async ({ title, description, category }) => {
     const prompt = `
-Return 2–4 concrete, technical tags directly related to the problem domain.
-Avoid abstract, emotional, or generic words (e.g., health, death, issue, help).
-Use only specific nouns. Return a comma-separated list.
+    Generate 2–4 concrete, technical tags that BELONG to the given category.
+    Do NOT invent tags outside this category.
+    Avoid abstract or generic words.
+    Return a comma-separated list.
 
+    Category: ${category}
 
-Title: ${title}
-Description: ${description}
-`;
+    Title: ${title}
+    Description: ${description}
+    `;
 
     const res = await fetch(
         `https://generativelanguage.googleapis.com/${API_VERSION}/models/${MODEL_NAME}:generateContent?key=${process.env.GEMINI_API_KEY}`,

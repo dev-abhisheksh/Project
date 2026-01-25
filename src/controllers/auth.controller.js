@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import hashToken from "../utils/hashToken.js";
+import { ExpertApplication } from "../models/expertApplication.model.js";
 
 export const generateAccessToken = (user) => {
     return jwt.sign(
@@ -63,6 +64,38 @@ const registerUser = async (req, res) => {
         return res.status(500).json({ message: "Registration failed" });
     }
 };
+
+const registerExpert = async (req, res) => {
+    try {
+        if (req.user.role === "expert") {
+            return res.status(400).json({ message: "You're already an expert" });
+        }
+
+        const { bio, experience, expertCategories, portfolioLink } = req.body;
+        if (!bio || !expertCategories?.length) {
+            return res.status(400).json({ message: "Bio and expert categories are required" });
+        }
+
+        const expertApplication = await ExpertApplication.create({
+            userId: req.user._id,
+            bio: bio.trim(),
+            experience,
+            expertCategories,
+            portfolioLink,
+            status: "pending",
+            reviewedBy: null
+        });
+
+        return res.status(201).json({
+            message: "Expert application submitted successfully",
+            expertApplication
+        });
+
+    } catch (error) {
+        return res.status(500).json({ message: "Failed to register as expert" });
+    }
+};
+
 
 const loginWithPassword = async (req, res) => {
     try {
@@ -222,5 +255,6 @@ export {
     registerUser,
     loginWithPassword,
     refreshAccessToken,
-    logoutUser
+    logoutUser,
+    registerExpert
 }

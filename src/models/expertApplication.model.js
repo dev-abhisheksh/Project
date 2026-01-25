@@ -13,12 +13,12 @@ const expertApplicationSchema = new mongoose.Schema({
     },
 
     experience: {
-        type: String
+        type: Number
     },
 
     expertCategories: [
         {
-            type: Number,
+            type: String,
             required: true
         }
     ],

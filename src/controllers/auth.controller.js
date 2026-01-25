@@ -92,6 +92,7 @@ const registerExpert = async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Failed to register as expert", error);
         return res.status(500).json({ message: "Failed to register as expert" });
     }
 };

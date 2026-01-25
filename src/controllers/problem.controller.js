@@ -4,11 +4,12 @@ import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 import { generateTagsWithAI } from "../services/tagsGenerationWithAi.servce.js";
+import { generateCategoryWithAi } from "../services/categoryGenerationWithAi.service.js";
 
 const createProblem = async (req, res) => {
     try {
-        let { title, description, category, expertOnly } = req.body;
-        if (!title || !description || !category) {
+        let { title, description, expertOnly } = req.body;
+        if (!title || !description) {
             return res.status(400).json({ message: "Title , description and category are required" })
         }
 
@@ -26,13 +27,14 @@ const createProblem = async (req, res) => {
 
         title = title.trim()
         description = description.trim()
-        category = category.trim().toLowerCase()
-
 
         const tags = await generateTagsWithAI({ title, description })
         const normalizedTags = tags.map(t => t.trim().toLowerCase());
 
         console.log("TAgs : ", normalizedTags)
+
+        let category = await generateCategoryWithAi({ title, description })
+        category = category.trim().toLowerCase()
 
         const problem = await Problem.create({
             title,

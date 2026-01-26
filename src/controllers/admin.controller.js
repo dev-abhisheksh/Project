@@ -1,3 +1,4 @@
+import { AdminLog } from "../models/adminLog.model.js"
 import { ExpertApplication } from "../models/expertApplication.model.js"
 import { User } from "../models/user.model.js"
 
@@ -53,6 +54,16 @@ const approveExpertApplication = async (req, res) => {
             application.reviewedBy = req.user._id,
             await application.save()
 
+        await AdminLog.create({
+            adminId: req.user._id,
+            action: "approved_expert_application",
+            entityType: "ExpertApplication",
+            entityId: application._id,
+            meta: {
+                userId: application.userId
+            }
+        })
+
         return res.status(200).json({ message: "Expert application approved successfully" })
 
     } catch (error) {
@@ -84,8 +95,31 @@ const rejectExpertApplication = async (req, res) => {
     }
 }
 
+
+// ---------------------------------------   ADMIN LOGS   ---------------------------------------
+const adminLogs = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Only Admins are allowed" })
+        }
+
+        const logs = await AdminLog.find()
+        if (!logs) return res.status(404).json({ message: "No logs are found" })
+
+        return res.status(200).json({
+            message: "Fetched all adminLogs",
+            count: logs.length,
+            logs
+        })
+    } catch (error) {
+        console.error("Failed to fetch adminLogs", error)
+        return res.status(500).json({ message: "Failed to fetch adminLogs" })
+    }
+}
+
 export {
     expertApplicationRequests,
     approveExpertApplication,
-    rejectExpertApplication
+    rejectExpertApplication,
+    adminLogs
 }

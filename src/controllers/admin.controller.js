@@ -1,6 +1,7 @@
 import { AdminLog } from "../models/adminLog.model.js"
 import { ExpertApplication } from "../models/expertApplication.model.js"
 import { Redemption } from "../models/redemption.model.js"
+import { Reputation } from "../models/reputation.model.js"
 import { User } from "../models/user.model.js"
 
 const expertApplicationRequests = async (req, res) => {
@@ -129,7 +130,61 @@ const redemptionRequests = async (req, res) => {
     }
 }
 
+const approveRedemptionRequest = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Only Admins are allowed" })
+        }
 
+        const { redemptionId } = req.params;
+
+        const request = await Redemption.findById(redemptionId)
+        if (!request) return res.status(404).json({ message: "Redemption Request not found or already processed" })
+
+        const totalEarned = await Reputation.aggregate([
+            { $match: { userId: request.userId } },
+            { $group: { _id: null, total: { $sum: "$points" } } }
+        ]);
+
+
+        const totalRedeemed = await Redemption.aggregate([
+            { $match: { userId: request.userId, status: "approved" } },
+            { $group: { _id: null, total: { $sum: "$points" } } }
+        ])
+
+        const earned = totalEarned[0] ? totalEarned[0].total : 0
+        const redeemed = totalRedeemed[0] ? totalRedeemed[0].total : 0
+        const available = earned - redeemed
+
+        if (available < request.points) {
+            return res.status(400).json({ message: "Insufficient points for this redemption" })
+        }
+
+        if (request.status !== "pending") return res.status(400).json({ message: "Request already processed" })
+
+        request.status = "approved"
+        await request.save()
+
+        await AdminLog.create({
+            adminId: req.user._id,
+            action: "approved_redemption_request",
+            entityType: "Redemption",
+            entityId: request._id,
+            meta: {
+                userId: request.userId,
+                points: request.points,
+                rewardType: request.rewardType
+            }
+        })
+
+        return res.status(200).json({
+            message: "Redemption Request approved"
+        })
+    } catch (error) {
+        console.error("Failed to approve redemption request", error)
+        return res.status(500).json({ message: "Failed to approve redemption request" })
+    }
+}
 
 // ---------------------------------------   ADMIN LOGS   ---------------------------------------
 const adminLogs = async (req, res) => {
@@ -157,5 +212,6 @@ export {
     approveExpertApplication,
     rejectExpertApplication,
     adminLogs,
-    redemptionRequests
+    redemptionRequests,
+    approveRedemptionRequest
 }

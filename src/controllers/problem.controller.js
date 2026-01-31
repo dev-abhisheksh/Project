@@ -9,7 +9,7 @@ import { textEnhancementService } from "../services/textEnhancement.service.js";
 
 const createProblem = async (req, res) => {
     try {
-        let { title, description, expertOnly } = req.body;
+        let { title, description, expertOnly, tags } = req.body;
         if (!title || !description) {
             return res.status(400).json({ message: "Title and description are required" });
         }
@@ -21,13 +21,14 @@ const createProblem = async (req, res) => {
         }
 
         title = title.trim();
-        let enhancedDescription = await textEnhancementService({ text: description, purpose: "clarify_problem_description" })
-        enhancedDescription = enhancedDescription.trim();
+        // let enhancedDescription = await textEnhancementService({ text: description, purpose: "clarify_problem_description" })
+        // enhancedDescription = enhancedDescription.trim();
+        description = description.trim()
 
         let category = await generateCategoryWithAi({ title, description });
         category = category.trim().toLowerCase();
 
-        let tags = await generateTagsWithAI({ title, description, category });
+        // let tags = await generateTagsWithAI({ title, description, category });
 
         const normalizedTags = [
             ...new Set(
@@ -39,7 +40,7 @@ const createProblem = async (req, res) => {
 
         const problem = await Problem.create({
             title,
-            description: enhancedDescription,
+            description: description,
             category,
             tags: normalizedTags,
             expertOnly: expertOnly === true,
@@ -106,12 +107,14 @@ const getProblems = async (req, res) => {
             .populate("createdBy", "fullName role")
 
         const total = await Problem.countDocuments(filter)
+        const totalPages = Math.ceil(total / limit) // ADD THIS LINE
 
         return res.status(200).json({
             message: "Fetched problems successfully",
             page,
             limit,
             total,
+            totalPages, // ADD THIS LINE
             results: problems.length,
             problems
         })

@@ -31,9 +31,9 @@ const createSolution = async (req, res) => {
         const problem = await Problem.findOne({ _id: problemId, isDeleted: false });
         if (!problem) return res.status(404).json({ message: "Problem not found!" })
 
-        if (problem.expertOnly && req.user.role !== "expert") {
-            return res.status(403).json({ message: "Only Experts are allowed" })
-        }
+        // if (problem.expertOnly && req.user.role !== "expert") {
+        //     return res.status(403).json({ message: "Only Experts are allowed" })
+        // }
 
         const solution = await Solution.create({
             answer,

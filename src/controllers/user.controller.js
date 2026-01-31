@@ -3,7 +3,7 @@ import { User } from "../models/user.model.js"
 
 const fetchAllUsers = async (req, res) => {
     try {
-        if (req.user.role !== "admin") return res.status(401).json({ message: "Only admins" })
+        // if (req.user.role !== "admin") return res.status(401).json({ message: "Only admins" })
 
         const users = await User.find()
             .select("-refreshTokens -password")

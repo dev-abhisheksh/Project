@@ -25,10 +25,19 @@ const getNotifications = async (req, res) => {
             })
             .lean()
 
+        // Mark notifications where problem was deleted
+        const processedNotifications = notifications.map(notif => ({
+            ...notif,
+            problemDeleted: !notif.problemId,
+            message: !notif.problemId
+                ? "A problem related to your expertise (now deleted)"
+                : notif.message
+        }));
+
         return res.status(200).json({
             message: "Fetched notifications",
-            count: notifications.length,
-            notifications,
+            count: processedNotifications.length,
+            notifications: processedNotifications,
         })
     } catch (error) {
         console.error("Failed to fetch notifications", error)

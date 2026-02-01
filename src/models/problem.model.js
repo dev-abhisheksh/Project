@@ -19,6 +19,13 @@ const problemSchema = new mongoose.Schema({
         index: true
     },
 
+    expertCategory: {
+        type: String,
+        required: true,
+        index: true,
+        default: "environment"
+    },
+
     tags: [
         {
             type: String,
@@ -43,7 +50,6 @@ const problemSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-
 
     status: {
         type: String,

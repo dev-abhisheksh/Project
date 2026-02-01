@@ -48,22 +48,30 @@ ${text}
 // ===================== CATEGORY GENERATION =====================
 export const generateCategoryWithAi = async ({ title, description }) => {
     const prompt = `
-Choose EXACTLY ONE category from the list below.
-Do NOT invent new categories. Return only the category text.
+You are a dual-category classifier. Analyze the problem and return TWO categories in JSON format:
 
-Allowed categories:
+1. "specificCategory": Choose EXACTLY ONE from the specific categories list
+2. "broadCategory": Choose EXACTLY ONE from the broad categories list
+
+SPECIFIC CATEGORIES (detailed):
 water conservation, food waste, energy efficiency, waste management,
 sustainable agriculture, air pollution, plastic reduction,
-urban sustainability, climate awareness, eco-friendly living
-Water scarcity, water pollution, food waste, food insecurity,
+urban sustainability, climate awareness, eco-friendly living,
+water scarcity, water pollution, food waste, food insecurity,
 energy wastage, fossil dependence, plastic waste, poor segregation,
 e-waste dumping, landfill overflow, air pollution, noise pollution,
 urban flooding, traffic congestion, climate impacts, heatwaves,
 soil degradation, crop wastage, chemical overuse, overconsumption,
-single-use plastics, weak enforcement, low awareness.
+single-use plastics, weak enforcement, low awareness
+
+BROAD CATEGORIES (for expert matching):
+water, energy, waste, food, agriculture, air, climate, urban, pollution, environment
 
 Title: ${title}
 Description: ${description}
+
+Return ONLY a JSON object in this exact format:
+{"specificCategory": "category name", "broadCategory": "category name"}
 `;
 
     const res = await fetch(
@@ -82,13 +90,30 @@ Description: ${description}
     }
 
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    let text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
         throw new Error("Gemini returned empty category response");
     }
 
-    return text.trim().toLowerCase();
+    // Clean up JSON response (remove markdown code blocks if present)
+    text = text.trim();
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+
+    try {
+        const categories = JSON.parse(text);
+        return {
+            specificCategory: categories.specificCategory?.trim().toLowerCase() || "general",
+            broadCategory: categories.broadCategory?.trim().toLowerCase() || "general"
+        };
+    } catch (error) {
+        console.error("Failed to parse category JSON:", error);
+        // Fallback to default categories
+        return {
+            specificCategory: "general",
+            broadCategory: "environment"
+        };
+    }
 };
 
 // ===================== TAG GENERATION =====================

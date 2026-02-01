@@ -23,18 +23,21 @@ const createProblem = async (req, res) => {
         title = title.trim();
         description = description.trim();
 
-        let category;
+        // Generate both specific and broad categories
+        let specificCategory = "general";
+        let broadCategory = "environment";
+
         try {
-            category = await generateCategoryWithAi({ title, description });
-            category = category.trim().toLowerCase();
+            const categories = await generateCategoryWithAi({ title, description });
+            specificCategory = categories.specificCategory;
+            broadCategory = categories.broadCategory;
         } catch (error) {
             console.error("AI category generation failed:", error);
-            category = "general";
         }
 
         let tags = [];
         try {
-            tags = await generateTagsWithAI({ title, description, category });
+            tags = await generateTagsWithAI({ title, description, category: specificCategory });
 
             if (typeof tags === 'string') {
                 tags = JSON.parse(tags);
@@ -58,16 +61,18 @@ const createProblem = async (req, res) => {
         const problem = await Problem.create({
             title,
             description: description,
-            category,
+            category: specificCategory,        // Specific category for display
+            expertCategory: broadCategory,     // Broad category for expert matching
             tags: normalizedTags,
             expertOnly: expertOnly === true || expertOnly === 'true',
             createdBy: req.user._id,
             bannerImage
         });
 
+        // Find experts using BROAD category for better matching
         const experts = await User.find({
             role: "expert",
-            expertCategories: category
+            expertCategories: broadCategory  // Match using broad category
         }).select("_id");
 
         if (experts.length > 0) {

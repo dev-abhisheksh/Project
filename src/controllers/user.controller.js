@@ -1,28 +1,39 @@
 import { User } from "../models/user.model.js"
 
-
 const fetchAllUsers = async (req, res) => {
-    try {
-        // if (req.user.role !== "admin") return res.status(401).json({ message: "Only admins" })
+  try {
+    const users = await User.find()
+      .select("-refreshTokens -password")
+      .sort({ createdAt: -1 })
 
-        const users = await User.find()
-            .select("-refreshTokens -password")
-            .sort({ createdAt: -1 })
+    const proUsers = users.filter(u => u.isPro).length
 
-        let pro = users.filter(p => p.isPro)
+    const usersGraph = await User.aggregate([
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$createdAt"
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ])
 
-        return res.status(200).json({
-            message: "Fetched all users",
-            count: users.length,
-            proUsers: pro.length,
-            users
-        })
-    } catch (error) {
-        console.error("Failed to fetch users", error)
-        return res.status(500).json({ message: "Failed to fetch users" })
-    }
+    return res.status(200).json({
+      message: "Fetched all users",
+      count: users.length,
+      proUsers,
+      users,
+      usersGraph   // 👈 REQUIRED for graph
+    })
+  } catch (error) {
+    console.error("Failed to fetch users", error)
+    return res.status(500).json({ message: "Failed to fetch users" })
+  }
 }
 
-export {
-    fetchAllUsers
-}
+export { fetchAllUsers }

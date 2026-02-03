@@ -21,11 +21,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser())
 
 app.use(cors({
-    origin: 'https://impacthub-gamma.vercel.app',
+    origin: [
+        'https://impacthub-gamma.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:5173'
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], 
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 
 
 app.use("/api/v1/auth", authRouter)

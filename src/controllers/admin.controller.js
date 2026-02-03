@@ -115,10 +115,11 @@ const redemptionRequests = async (req, res) => {
             return res.status(403).json({ message: "Only Admins are allowed" })
         }
 
-        const requests = await Redemption.find({ status: "pending" }).sort({ createdAt: -1 })
-        if (requests.length === 0) {
-            return res.status(404).json({ message: "No pending redemption requests found" })
-        }
+        const requests = await Redemption.find({ status: "pending" })
+            .populate("userId", "fullName email createdAt reputationPoints") // 👈 ADD THIS LINE
+            .sort({ createdAt: -1 })
+
+        // Remove the 404 check - empty array is valid
         return res.status(200).json({
             message: "Fetched all pending redemption requests",
             count: requests.length,
@@ -228,6 +229,8 @@ const adminLogs = async (req, res) => {
         }
 
         const logs = await AdminLog.find().sort({ createdAt: -1 })
+            .populate("adminId", "fullName name email")
+            .sort({ createdAt: -1 });
         if (!logs) return res.status(404).json({ message: "No logs are found" })
 
         return res.status(200).json({
@@ -243,11 +246,19 @@ const adminLogs = async (req, res) => {
 
 const fetchAllUsers = async (req, res) => {
     try {
+        let page = Number(req.query.page);
+        let limit = Number(req.query.limit);
+        let skip = (page - 1) * limit;
+
         const users = await User.find()
             .select("-refreshTokens -password")
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
 
-        const proUsers = users.filter(u => u.isPro).length
+        const count = await User.countDocuments();
+        const proUsers = await User.countDocuments({ isPro: true });
+        const admins = await User.countDocuments({ role: "admin" });
 
         const usersGraph = await User.aggregate([
             {
@@ -266,9 +277,10 @@ const fetchAllUsers = async (req, res) => {
 
         return res.status(200).json({
             message: "Fetched all users",
-            count: users.length,
+            count,
             proUsers,
             users,
+            admins,
             usersGraph   // 👈 REQUIRED for graph
         })
     } catch (error) {
@@ -276,6 +288,8 @@ const fetchAllUsers = async (req, res) => {
         return res.status(500).json({ message: "Failed to fetch users" })
     }
 }
+
+
 
 
 export {

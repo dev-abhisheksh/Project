@@ -1,5 +1,6 @@
 import { AdminLog } from "../models/adminLog.model.js"
 import { ExpertApplication } from "../models/expertApplication.model.js"
+import { Problem } from "../models/problem.model.js"
 import { Redemption } from "../models/redemption.model.js"
 import { Reputation } from "../models/reputation.model.js"
 import { User } from "../models/user.model.js"
@@ -289,6 +290,144 @@ const fetchAllUsers = async (req, res) => {
     }
 }
 
+const softDeleteProblem = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Admins only" });
+        }
+
+        const { problemId } = req.params;
+        if (!problemId) {
+            return res.status(400).json({ message: "Problem ID is required" });
+        }
+
+        const problem = await Problem.findOneAndUpdate(
+            { _id: problemId, isDeleted: false },
+            {
+                isDeleted: true,
+                status: "closed"
+            },
+            { new: true }
+        )
+            .populate("createdBy", "fullName role ")
+
+        if (!problem) {
+            return res.status(404).json({
+                message: "Problem not found or already deleted"
+            });
+        }
+
+        await AdminLog.create({
+            adminId: req.user._id,
+            action: "soft_deleted_problem",
+            entityType: "Problem",
+            entityId: problemId,
+            meta: {
+                title: problem.title,
+                createdBy: problem.createdBy._id,
+                fullName: problem.fullName,
+                deletedAt: new Date()
+            }
+        });
+
+
+        return res.status(200).json({
+            message: "Problem soft deleted successfully",
+            problem
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+const toggleDeleteProblem = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Admins only" });
+        }
+
+        const { problemId } = req.params;
+        if (!problemId) {
+            return res.status(400).json({ message: "Problem ID is required" });
+        }
+
+        const problem = await Problem.findById(problemId);
+
+        if (!problem) {
+            return res.status(404).json({ message: "Problem not found" });
+        }
+
+        const wasDeleted = problem.isDeleted;
+
+        // TOGGLE
+        problem.isDeleted = !problem.isDeleted;
+
+        // status handling (important)
+        if (problem.isDeleted) {
+            problem.status = "closed";
+        } else {
+            // restore logic — choose ONE policy
+            problem.status = "open"; // or store previousStatus if you want accuracy
+        }
+
+        await problem.save();
+
+        await AdminLog.create({
+            adminId: req.user._id,
+            action: wasDeleted ? "restored_problem" : "soft_deleted_problem",
+            entityType: "Problem",
+            entityId: problem._id,
+            meta: {
+                title: problem.title,
+                createdBy: problem.createdBy,
+                deletedAt: wasDeleted ? null : new Date()
+            }
+        });
+
+        return res.status(200).json({
+            message: wasDeleted
+                ? "Problem restored successfully"
+                : "Problem soft deleted successfully",
+            problem
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+
+const fetchProductsForAdmin = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") return res.status(403).json({ message: "Admins only" })
+
+        const page = Number(req.query.page)
+        const limit = Number(req.query.limit)
+        let skip = (page - 1) * limit;
+
+        const problems = await Problem.find().select("-description -expertOnly -bannerImage -__v --expertCategory")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate("createdBy", "fullName role")
+
+        const problemsCount = await Problem.countDocuments();
+
+        return res.status(200).json({
+            message: "Fetched all problems",
+            page,
+            limit,
+            totalPages: Math.ceil(problemsCount / limit),
+            problemsCount,
+            problems
+        });
+    } catch (error) {
+        console.error("Failed to fetch problems", error)
+        return res.status(500).json({ message: "Failed to fetch problems" })
+    }
+}
 
 
 
@@ -300,5 +439,8 @@ export {
     redemptionRequests,
     approveRedemptionRequest,
     rejectRedemptionRequest,
-    fetchAllUsers
+    fetchAllUsers,
+    softDeleteProblem,
+    toggleDeleteProblem,
+    fetchProductsForAdmin
 }

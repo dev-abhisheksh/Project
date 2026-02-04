@@ -11,7 +11,7 @@ export const generateAccessToken = (user) => {
             role: user.role,
         },
         process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "7d" }
     );
 };
 
@@ -143,10 +143,10 @@ const loginWithPassword = async (req, res) => {
         const accessToken = generateAccessToken(existingUser);
         const refreshToken = generateRefreshToken(existingUser);
 
-        existingUser.refreshTokens.push({
-            tokenHash: hashToken(refreshToken),
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        });
+        // existingUser.refreshTokens.push({
+        //     tokenHash: hashToken(refreshToken),
+        //     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        // });
 
         await existingUser.save();
 

@@ -3,6 +3,7 @@ import { ExpertApplication } from "../models/expertApplication.model.js"
 import { Problem } from "../models/problem.model.js"
 import { Redemption } from "../models/redemption.model.js"
 import { Reputation } from "../models/reputation.model.js"
+import { Solution } from "../models/solution.model.js"
 import { User } from "../models/user.model.js"
 
 const expertApplicationRequests = async (req, res) => {
@@ -229,14 +230,23 @@ const adminLogs = async (req, res) => {
             return res.status(403).json({ message: "Only Admins are allowed" })
         }
 
+        let page = Number(req.query.page)
+        let limit = Number(req.query.limit)
+        let skip = (page - 1) * limit;
+
         const logs = await AdminLog.find().sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .populate("adminId", "fullName name email")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+
         if (!logs) return res.status(404).json({ message: "No logs are found" })
+
+        const count = await AdminLog.countDocuments()
 
         return res.status(200).json({
             message: "Fetched all adminLogs",
-            count: logs.length,
+            count,
             logs
         })
     } catch (error) {
@@ -353,7 +363,8 @@ const toggleDeleteProblem = async (req, res) => {
             return res.status(400).json({ message: "Problem ID is required" });
         }
 
-        const problem = await Problem.findById(problemId);
+        const problem = await Problem.findById(problemId)
+            .populate("createdBy", "fullName")
 
         if (!problem) {
             return res.status(404).json({ message: "Problem not found" });
@@ -381,7 +392,7 @@ const toggleDeleteProblem = async (req, res) => {
             entityId: problem._id,
             meta: {
                 title: problem.title,
-                createdBy: problem.createdBy,
+                fullName: problem.fullName,
                 deletedAt: wasDeleted ? null : new Date()
             }
         });
@@ -429,7 +440,73 @@ const fetchProductsForAdmin = async (req, res) => {
     }
 }
 
+const fetchSolutionsForAdmin = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") return res.status(403).json({ message: "Admins only" })
 
+        let page = Number(req.query.page)
+        let limit = Number(req.query.limit)
+        let skip = (page - 1) * limit;
+
+        const solutions = await Solution.find()
+            .populate("answeredBy", "fullName")
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 })
+
+        const count = await Solution.countDocuments()
+
+        return res.status(200).json({
+            message: "Fetched all solutions",
+            count,
+            solutions
+        })
+    } catch (error) {
+        console.error("Failed to fetch all solutions", error)
+        return res.status(500).json({ message: "Failed to fetch all solutions" })
+    }
+}
+
+const toggleSolutionsVisibility = async (req, res) => {
+    try {
+        if (req.user.role !== "admin") return res.status(403).json({ message: "Admins only" })
+
+        const { solutionId } = req.params;
+        if (!solutionId) return res.status(400).json({ message: "SolutionId is required" })
+
+        const solution = await Solution.findById(solutionId)
+            .populate("answeredBy", "fullName")
+
+        if (!solution) return res.status(404).json({ message: "Solution not found" })
+
+        const wasDeleted = solution.isDeleted;
+        solution.isDeleted = !solution.isDeleted
+
+        await solution.save()
+
+        await AdminLog.create({
+            adminId: req.user._id,
+            action: wasDeleted ? "restored_solution" : "soft_deleted_solution",
+            entityType: "Solution",
+            entityId: solution._id,
+            meta: {
+                title: solution.title,
+                fullName: solution.fullName,
+                deletedAt: wasDeleted ? null : new Date()
+            }
+        })
+
+        return res.status(200).json({
+            message: wasDeleted
+                ? "Solution restored successfully"
+                : "Solution soft deleted successfully",
+            solution
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
 
 export {
     expertApplicationRequests,
@@ -442,5 +519,7 @@ export {
     fetchAllUsers,
     softDeleteProblem,
     toggleDeleteProblem,
-    fetchProductsForAdmin
+    fetchProductsForAdmin,
+    fetchSolutionsForAdmin,
+    toggleSolutionsVisibility
 }

@@ -9,12 +9,13 @@ const verifyToken = async (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    const user = await User.findById(decoded._id).select("_id role isBanned banExpiresAt");
+    const user = await User.findById(decoded._id).select("_id role banExpiresAt");
     if (!user) return res.status(401).json({ message: "Invalid token" });
 
     req.user = user;
     next();
-  } catch {
+  } catch (error) {
+    console.error("Token error", error)
     return res.status(401).json({ message: "Unauthorized" });
   }
 };

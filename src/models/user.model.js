@@ -98,11 +98,6 @@ const userSchema = new mongoose.Schema(
             default: null
         },
 
-        isBanned: {
-            type: Boolean,
-            default: false
-        },
-
         banExpiresAt: {
             type: Date
         }

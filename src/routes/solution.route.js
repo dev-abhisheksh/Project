@@ -4,10 +4,11 @@ import authorizeRoles from "../middlewares/roles.middleware.js";
 import { acceptSolution, allSolutionsOfProblem, createSolution, reportSolution } from "../controllers/solution.controller.js";
 import { aiModeration } from "../middlewares/aiModeration.middleware.js";
 import { mySolutions } from "../controllers/userDashboard.controller.js";
+import { checkBan } from "../middlewares/checkBan.middleware.js";
 
 const router = express.Router()
 
-router.post("/create/:problemId", verifyToken, createSolution)
+router.post("/create/:problemId", verifyToken, checkBan, createSolution)
 router.patch("/accept/:solutionId", verifyToken, acceptSolution)
 router.get("/my", verifyToken, mySolutions)
 router.get("/:problemId", verifyToken, allSolutionsOfProblem)

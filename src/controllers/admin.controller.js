@@ -6,6 +6,7 @@ import { Redemption } from "../models/redemption.model.js"
 import { Reputation } from "../models/reputation.model.js"
 import { Solution } from "../models/solution.model.js"
 import { User } from "../models/user.model.js"
+import { isUserBanned } from "../utils/isUserBanned.js"
 
 const expertApplicationRequests = async (req, res) => {
     try {
@@ -262,11 +263,16 @@ const fetchAllUsers = async (req, res) => {
         let limit = Number(req.query.limit);
         let skip = (page - 1) * limit;
 
-        const users = await User.find()
+        const usersRaw = await User.find()
             .select("-refreshTokens -password")
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit)
+            .limit(limit);
+
+        const users = usersRaw.map(user => ({
+            ...user.toObject(),
+            isBanned: isUserBanned(user)
+        }));
 
         const count = await User.countDocuments();
         const proUsers = await User.countDocuments({ isPro: true });
@@ -293,8 +299,9 @@ const fetchAllUsers = async (req, res) => {
             proUsers,
             users,
             admins,
-            usersGraph   // 👈 REQUIRED for graph
-        })
+            usersGraph
+        });
+
     } catch (error) {
         console.error("Failed to fetch users", error)
         return res.status(500).json({ message: "Failed to fetch users" })
@@ -520,7 +527,6 @@ const banUser = async (req, res) => {
         if (!hours || hours <= 0) return res.status(400).json({ message: "Invalid banTime" });
 
         await User.findByIdAndUpdate(userId, {
-            isBanned: true,
             banExpiresAt: new Date(Date.now() + hours * 60 * 60 * 1000)
         });
 

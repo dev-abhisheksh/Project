@@ -3,6 +3,8 @@ import { Problem } from "../models/problem.model.js";
 import { Solution } from "../models/solution.model.js";
 import { addReputationEvent } from "../services/reputation.service.js";
 import { Reputation } from "../models/reputation.model.js";
+import { client, delRedisCache } from "../utils/redisClient.js";
+import { logAdminAction } from "../utils/adminLogHelper.js";
 
 
 const createSolution = async (req, res) => {
@@ -44,6 +46,12 @@ const createSolution = async (req, res) => {
         await solution.populate("answeredBy", "fullName")
 
         await addReputationEvent({ userId: req.user._id, solutionId: solution._id, type: "commented" })
+
+        await delRedisCache(client, [
+            `personalDashboard:${req.user._id}`,
+            `personalDashboard:${problem.createdBy}`,
+            `solutions:problemId:${problemId}`
+        ])
 
         return res.status(201).json({
             message: "Solution created successfully",
@@ -110,7 +118,6 @@ const acceptSolution = async (req, res) => {
             problem.save()
         ]);
 
-        // ✅ Add reputation points for accepted solution
         try {
             await addReputationEvent({
                 userId: solution.answeredBy,
@@ -121,17 +128,12 @@ const acceptSolution = async (req, res) => {
             console.error("Failed to add reputation:", err.message);
         }
 
-        // ✅ Log admin action (optional)
-        try {
-            await logAdminAction({
-                adminId: req.user._id,
-                action: "ACCEPT_SOLUTION",
-                entityType: "Solution",
-                entityId: solutionId
-            });
-        } catch (err) {
-            console.error("Failed to log admin action:", err.message);
-        }
+        await delRedisCache(client, [
+            `personalDashboard:${solution.answeredBy}`,
+            `personalDashboard:${problem.createdBy}`,
+            `solutions:problemId:${solution.problemId}`,
+            `allProblems:page:*`
+        ])
 
         return res.status(200).json({
             message: "Solution accepted successfully",
@@ -156,6 +158,11 @@ const allSolutionsOfProblem = async (req, res) => {
             return res.status(400).json({ message: "Invalid problemID" })
         }
 
+        const cacheKey = `solutions:problemId:${problemId}`
+        const cached = await client.get(cacheKey)
+        if (cached && cached !== "") {
+            return res.status(200).json(JSON.parse(cached))
+        }
 
         const problem = await Problem.findById(problemId)
         if (!problem) return res.status(404).json({ message: "Problem not found" })
@@ -182,12 +189,15 @@ const allSolutionsOfProblem = async (req, res) => {
             }
         }));
 
-
-        return res.status(200).json({
+        const responseData = {
             message: `Fetched all solutions for problem : ${problem?.title}`,
             count: finalSolutions.length,
             solutions: finalSolutions
-        })
+        };
+
+        await client.setex(cacheKey, 500, JSON.stringify(responseData))
+
+        return res.status(200).json(responseData)
     } catch (error) {
         console.error("Failed to fetch solutions", error)
         return res.status(500).json({ message: "Failed to fetch solutions" })
@@ -219,7 +229,6 @@ const reportSolution = async (req, res) => {
         return res.status(500).json({ message: "Operation failed" })
     }
 }
-
 
 export {
     createSolution,

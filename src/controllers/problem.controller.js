@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 import { generateCategoryWithAi } from "../services/ai.service.js";
 import { generateTagsWithAI } from "../services/tagsGenerationWithAi.servce.js";
+import { client, delRedisCache } from "../utils/redisClient.js";
 
 const createProblem = async (req, res) => {
     try {
@@ -85,6 +86,12 @@ const createProblem = async (req, res) => {
             );
         }
 
+        await delRedisCache(client, [
+            `personalDashboard:${req.user._id}`,
+            `personalDashboard:${problem.createdBy}`,
+            `allProblems:page:*`
+        ])
+
         return res.status(201).json({
             message: "Problem created successfully",
             problem
@@ -110,6 +117,12 @@ const getProblems = async (req, res) => {
             isDeleted: false
         }
 
+        const cacheKey = `allProblems:page:${page}`
+        const cached = await client.get(cacheKey);
+        if (cached && cached !== "") {
+            return res.status(200).json(JSON.parse(cached))
+        }
+
         if (category) filter.category = category.toLowerCase()
         if (expertOnly !== undefined) filter.expertOnly = expertOnly === "true";
         if (tags) {
@@ -129,17 +142,20 @@ const getProblems = async (req, res) => {
             .populate("createdBy", "fullName role")
 
         const total = await Problem.countDocuments(filter)
-        const totalPages = Math.ceil(total / limit) // ADD THIS LINE
-
-        return res.status(200).json({
+        const totalPages = Math.ceil(total / limit)
+        const responseData = {
             message: "Fetched problems successfully",
             page,
             limit,
             total,
-            totalPages, // ADD THIS LINE
+            totalPages,
             results: problems.length,
             problems
-        })
+        };
+
+        await client.setex(cacheKey, 600, JSON.stringify(responseData))
+
+        return res.status(200).json(responseData)
 
     } catch (error) {
         console.error("Failed to fetch problems", error)

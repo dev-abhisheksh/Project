@@ -5,18 +5,26 @@ import { Redemption } from "../models/redemption.model.js";
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
+import { client } from "../utils/redisClient.js";
 
 export const getUserDashboardStats = async (req, res) => {
     try {
         const userId = new mongoose.Types.ObjectId(req.user._id);
+        const cacheKey = `personalDashboard:${userId}`
 
-        // 1. Total problems posted
+        // Check cache
+        const cached = await client.get(cacheKey)
+        if (cached) {
+            return res.status(200).json({
+                message: "From cache", ...JSON.parse(cached)
+            })
+        }
+
         const totalProblems = await Problem.countDocuments({
             createdBy: userId,
             isDeleted: false
         });
 
-        // 2. Total solutions received on user's problems
         const totalSolutionsReceived = await Solution.countDocuments({
             problemId: {
                 $in: await Problem.find({ createdBy: userId }).distinct("_id")
@@ -34,7 +42,6 @@ export const getUserDashboardStats = async (req, res) => {
 
         const totalPoints = totalPointsEarned[0]?.total || 0;
 
-        // 3. Problem status breakdown (solved vs unsolved)
         const problemStatus = await Problem.aggregate([
             { $match: { createdBy: userId, isDeleted: false } },
             {
@@ -45,21 +52,17 @@ export const getUserDashboardStats = async (req, res) => {
             }
         ]);
 
-
-        // 4. Latest 3 problems
         const latestProblems = await Problem.find({ createdBy: userId })
             .sort({ createdAt: -1 })
             .limit(3)
             .select("title status createdAt description");
 
-        // 5. Latest 3 solutions provided by user
         const latestSolutions = await Solution.find({ answeredBy: userId })
             .sort({ createdAt: -1 })
             .limit(3)
             .select("problemId answer")
             .populate("problemId", "title");
 
-        // Solutions received over time (for line graph)
         const solutionsReceivedOverTime = await Solution.aggregate([
             {
                 $match: {
@@ -87,9 +90,7 @@ export const getUserDashboardStats = async (req, res) => {
             },
         ]);
 
-
-
-        res.status(200).json({
+        const responseData = {
             totalProblems,
             totalSolutionsReceived,
             totalSolutionsProvided,
@@ -98,7 +99,12 @@ export const getUserDashboardStats = async (req, res) => {
             latestSolutions,
             solutionsReceivedOverTime,
             totalPoints
-        });
+        };
+
+        await client.setex(cacheKey, 300, JSON.stringify(responseData));
+
+        res.status(200).json(responseData);
+
     } catch (error) {
         res.status(500).json({ message: "Dashboard fetch failed" });
     }

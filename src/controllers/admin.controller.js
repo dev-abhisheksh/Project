@@ -7,6 +7,7 @@ import { Reputation } from "../models/reputation.model.js"
 import { Solution } from "../models/solution.model.js"
 import { User } from "../models/user.model.js"
 import { isUserBanned } from "../utils/isUserBanned.js"
+import { client, delRedisCache } from "../utils/redisClient.js"
 
 const expertApplicationRequests = async (req, res) => {
     try {
@@ -503,6 +504,8 @@ const toggleSolutionsVisibility = async (req, res) => {
                 deletedAt: wasDeleted ? null : new Date()
             }
         })
+
+        await client.del(`solutions:problemId:${solution.problemId}`)
 
         return res.status(200).json({
             message: wasDeleted

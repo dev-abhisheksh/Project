@@ -103,6 +103,73 @@ const createProblem = async (req, res) => {
     }
 };
 
+const updateMyProblem = async (req, res) => {
+    try {
+        const { problemId } = req.params;
+        const { title, description, expertOnly } = req.body || {};
+
+        if (!mongoose.Types.ObjectId.isValid(problemId)) {
+            return res.status(400).json({ message: "Invalid Problem ID" });
+        }
+
+        const updateFields = {};
+
+        if (typeof title === "string") {
+            updateFields.title = title.trim();
+        }
+
+        if (typeof description === "string") {
+            updateFields.description = description.trim();
+        }
+
+        if (expertOnly !== undefined) {
+            updateFields.expertOnly =
+                expertOnly === true || expertOnly === "true";
+        }
+
+        if (req.file) {
+            const result = await uploadToCloudinary(
+                req.file.buffer,
+                "problem-images"
+            );
+            updateFields.bannerImage = result.secure_url;
+        }
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ message: "No fields to update" });
+        }
+
+        const problem = await Problem.findOneAndUpdate(
+            {
+                _id: problemId,
+                createdBy: req.user._id,
+                isDeleted: false,
+            },
+            { $set: updateFields },
+            { new: true }
+        );
+
+        if (!problem) {
+            return res
+                .status(404)
+                .json({ message: "Problem not found or access denied" });
+        }
+
+        await delRedisCache(client, [
+            `personalDashboard:${req.user._id}`,
+            `problem:${problemId}`,
+            `allProblems:page:*`
+        ]);
+
+        return res.status(200).json({
+            message: "Problem updated successfully",
+            problem,
+        });
+    } catch (error) {
+        console.error("Failed to update problem", error);
+        return res.status(500).json({ message: "Failed to update problem" });
+    }
+};
 
 const getProblems = async (req, res) => {
     try {
@@ -350,5 +417,6 @@ export {
     toggleDeleteProblemVisibility,
     getMyProblems,
     togglePinProblem,
-    getPinnedProblems
+    getPinnedProblems,
+    updateMyProblem
 }

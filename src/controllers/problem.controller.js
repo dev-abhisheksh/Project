@@ -213,41 +213,43 @@ const getProblems = async (req, res) => {
     try {
         let { category, tags, expertOnly } = req.query;
 
-        let page = Number(req.query.page) || 1
-        let limit = Number(req.query.limit) || 10
+        let page = Number(req.query.page) || 1;
+        let limit = Number(req.query.limit) || 10;
+        let skip = (page - 1) * limit;
 
-        let skip = (page - 1) * limit
+        const filter = { isDeleted: false };
 
-        const filter = {
-            isDeleted: false
-        }
+        if (category) filter.category = category.toLowerCase();
+        if (expertOnly !== undefined)
+            filter.expertOnly = expertOnly === "true";
 
-        const cacheKey = `allProblems:page:${page}`
-        const cached = await client.get(cacheKey);
-        if (cached && cached !== "") {
-            return res.status(200).json(JSON.parse(cached))
-        }
-
-        if (category) filter.category = category.toLowerCase()
-        if (expertOnly !== undefined) filter.expertOnly = expertOnly === "true";
         if (tags) {
             const parsedTags = tags
                 .split(",")
                 .map(tag => tag.trim().toLowerCase())
-                .filter(Boolean)
+                .filter(Boolean);
+
             if (parsedTags.length) {
-                filter.tags = { $in: parsedTags }
+                filter.tags = { $in: parsedTags };
             }
+        }
+
+        const cacheKey = `problems:page:${page}:limit:${limit}:category:${category || "all"}:tags:${tags || "none"}:expert:${expertOnly || "all"}`;
+
+        const cached = await client.get(cacheKey);
+        if (cached) {
+            return res.status(200).json(JSON.parse(cached));
         }
 
         const problems = await Problem.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate("createdBy", "fullName role")
+            .populate("createdBy", "fullName role coverImage");
 
-        const total = await Problem.countDocuments(filter)
-        const totalPages = Math.ceil(total / limit)
+        const total = await Problem.countDocuments(filter);
+        const totalPages = Math.ceil(total / limit);
+
         const responseData = {
             message: "Fetched problems successfully",
             page,
@@ -258,15 +260,15 @@ const getProblems = async (req, res) => {
             problems
         };
 
-        await client.setex(cacheKey, 600, JSON.stringify(responseData))
+        await client.setex(cacheKey, 600, JSON.stringify(responseData));
 
-        return res.status(200).json(responseData)
+        return res.status(200).json(responseData);
 
     } catch (error) {
-        console.error("Failed to fetch problems", error)
-        return res.status(500).json({ message: "Failed to fetch problems" })
+        console.error("Failed to fetch problems", error);
+        return res.status(500).json({ message: "Failed to fetch problems" });
     }
-}
+};
 
 const getProblemById = async (req, res) => {
     try {
@@ -276,16 +278,15 @@ const getProblemById = async (req, res) => {
             return res.status(400).json({ message: "Invalid Problem ID" })
         }
 
-        const problem = await Problem.findOne({
-            _id: problemId,
-            isDeleted: false
-        })
-        if (!problem) return res.status(404).json({ message: "Problem not foundF" })
+        const problem = await Problem.findOneAndUpdate(
+            { _id: problemId, isDeleted: false },
+            { $inc: { views: 1 } },
+            { new: true }
+        ).populate("createdBy", "fullName");
 
-        await Problem.updateOne(
-            { _id: problemId },
-            { $inc: { views: 1 } }
-        )
+        if (!problem) return res.status(404).json({ message: "Problem not found" })
+
+
 
         return res.status(200).json({
             message: "Problem fetched successfully",

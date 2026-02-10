@@ -9,7 +9,7 @@ const router = express.Router()
 
 router.post("/create", verifyToken, checkBan, upload.single("bannerImage"), createProblem)
 router.get("/", verifyToken, getProblems)
-router.patch("/update/:problemId", verifyToken, upload.single("bannerImage"), updateMyProblem)
+router.patch("/:problemId/edit", verifyToken, upload.single("bannerImage"), updateMyProblem)
 router.patch("/delete/:problemId", verifyToken, deleteProblem)
 router.patch("/toggle/:problemId", verifyToken, authorizeRoles("admin"), toggleDeleteProblemVisibility)
 router.get("/my", verifyToken, getMyProblems)

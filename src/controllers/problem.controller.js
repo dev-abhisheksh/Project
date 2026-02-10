@@ -6,6 +6,7 @@ import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 import { generateCategoryWithAi } from "../services/ai.service.js";
 import { generateTagsWithAI } from "../services/tagsGenerationWithAi.servce.js";
 import { client, delRedisCache } from "../utils/redisClient.js";
+import cloudinary from "../utils/cloudinary.js";
 
 const createProblem = async (req, res) => {
     try {
@@ -106,54 +107,91 @@ const createProblem = async (req, res) => {
 const updateMyProblem = async (req, res) => {
     try {
         const { problemId } = req.params;
-        const { title, description, expertOnly } = req.body || {};
+        const { title, description, expertOnly, tags } = req.body || {};
 
         if (!mongoose.Types.ObjectId.isValid(problemId)) {
             return res.status(400).json({ message: "Invalid Problem ID" });
         }
 
+        // First fetch the problem
+        const existingProblem = await Problem.findOne({
+            _id: problemId,
+            isDeleted: false,
+        });
+
+        const isOwner = existingProblem.createdBy.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === "admin";
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        if (!existingProblem) {
+            return res
+                .status(404)
+                .json({ message: "Problem not found or access denied" });
+        }
+
         const updateFields = {};
 
-        if (typeof title === "string") {
+        // Title
+        if (typeof title === "string" && title.trim().length > 0) {
             updateFields.title = title.trim();
         }
 
-        if (typeof description === "string") {
+        // Description
+        if (typeof description === "string" && description.trim().length > 0) {
             updateFields.description = description.trim();
         }
 
+        // Expert only
         if (expertOnly !== undefined) {
             updateFields.expertOnly =
                 expertOnly === true || expertOnly === "true";
         }
 
+        // Tags
+        if (tags) {
+            try {
+                const parsedTags = JSON.parse(tags);
+                if (Array.isArray(parsedTags)) {
+                    updateFields.tags = parsedTags;
+                }
+            } catch {
+                return res.status(400).json({ message: "Invalid tags format" });
+            }
+        }
+
+        // Image update
         if (req.file) {
+            // Delete old image if exists
+            if (existingProblem.bannerImage?.public_id) {
+                await cloudinary.uploader.destroy(
+                    existingProblem.bannerImage.public_id
+                );
+            }
+
+            // Upload new image
             const result = await uploadToCloudinary(
                 req.file.buffer,
                 "problem-images"
             );
-            updateFields.bannerImage = result.secure_url;
+
+            updateFields.bannerImage = {
+                url: result.secure_url,
+                public_id: result.public_id,
+            };
         }
 
         if (Object.keys(updateFields).length === 0) {
             return res.status(400).json({ message: "No fields to update" });
         }
 
-        const problem = await Problem.findOneAndUpdate(
-            {
-                _id: problemId,
-                createdBy: req.user._id,
-                isDeleted: false,
-            },
+        const problem = await Problem.findByIdAndUpdate(
+            problemId,
             { $set: updateFields },
             { new: true }
         );
-
-        if (!problem) {
-            return res
-                .status(404)
-                .json({ message: "Problem not found or access denied" });
-        }
 
         await delRedisCache(client, [
             `personalDashboard:${req.user._id}`,

@@ -47,8 +47,8 @@ const problemSchema = new mongoose.Schema({
     },
 
     bannerImage: {
-        type: String,
-        default: null
+        url: String,
+        public_id: String
     },
 
     status: {

@@ -11,6 +11,7 @@ import redemptionRouter from "./routes/redemption.route.js"
 import userRouter from "./routes/user.route.js"
 import adminRouter from "./routes/admin.route.js";
 import chatRouter from "./routes/conversation.route.js"
+import searchRouter from "./routes/search.route.js"
 import cors from "cors";
 
 dotenv.config();
@@ -43,5 +44,6 @@ app.use("/api/v1/redemptions", redemptionRouter)
 app.use("/api/v1/users", userRouter)
 app.use("/api/v1/admin", adminRouter)
 app.use("/api/v1/chat", chatRouter)
+app.use("/api/v1/search", searchRouter)
 
 export default app;

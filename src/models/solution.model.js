@@ -36,6 +36,11 @@ const solutionSchema = new mongoose.Schema({
         default: false
     },
 
+    isReported: {
+        type: Boolean,
+        default: false
+    },
+
     votes: {
         upvotes: {
             type: Number,

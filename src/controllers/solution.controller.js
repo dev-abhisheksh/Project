@@ -251,6 +251,10 @@ const reportSolution = async (req, res) => {
                 .json({ message: "Solution already reported" });
         }
 
+        if(solution.isAccepted) {
+            return res.status(400).json({ message: "Cannot report an accepted solution" });
+        }
+
         // mark solution as reported
         solution.isReported = true;
         await solution.save();

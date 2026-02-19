@@ -349,6 +349,11 @@ const softDeleteProblem = async (req, res) => {
             }
         });
 
+        await delRedisCache(client, [
+            `allProblems:*`,
+            `problem:${problem._id}`,
+            `personalDashboard:${problem.createdBy._id}:*`
+        ])
 
         return res.status(200).json({
             message: "Problem soft deleted successfully",

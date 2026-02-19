@@ -382,7 +382,7 @@ export const updateMyProfile = async (req, res) => {
 export const getMyAvatar = async (req, res) => {
     try {
         const user = await User.findById(req.user._id)
-            .select("coverImage username")
+            .select("coverImage fullName")
             .lean();
 
         if (!user) {

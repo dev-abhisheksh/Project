@@ -4,6 +4,6 @@ import { toggleLike } from "../controllers/vote.controller.js";
 
 const router = express.Router()
 
-router.patch("/toggle/:solutionId", verifyToken, toggleLike)
+router.patch("/toggle/:solutionId", verifyToken, toggleLike);
 
 export default router

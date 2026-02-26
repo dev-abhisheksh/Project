@@ -7,6 +7,7 @@ import { client, delRedisCache } from "../utils/redisClient.js";
 import { logAdminAction } from "../utils/adminLogHelper.js";
 import { AdminLog } from "../models/adminLog.model.js";
 import { validateSolutionWithAI } from "../services/ai.service.js";
+import { Vote } from "../models/vote.model.js";
 
 
 const createSolution = async (req, res) => {
@@ -185,40 +186,49 @@ const acceptSolution = async (req, res) => {
 const allSolutionsOfProblem = async (req, res) => {
     try {
         const { problemId } = req.params;
-        if (!problemId) return res.status(400).json({ message: "Problem ID is required" })
+        const userId = req.user._id; // make sure verifyToken runs on this route
+
+        if (!problemId) return res.status(400).json({ message: "Problem ID is required" });
         if (!mongoose.Types.ObjectId.isValid(problemId)) {
-            return res.status(400).json({ message: "Invalid problemID" })
+            return res.status(400).json({ message: "Invalid problemID" });
         }
 
-        const cacheKey = `solutions:problemId:${problemId}`
-        const cached = await client.get(cacheKey)
+        // Cache key per user so votes aren't shared across users
+        const cacheKey = `solutions:problemId:${problemId}:userId:${userId}`;
+        const cached = await client.get(cacheKey);
         if (cached && cached !== "") {
-            return res.status(200).json(JSON.parse(cached))
+            return res.status(200).json(JSON.parse(cached));
         }
 
-        const problem = await Problem.findById(problemId)
-        if (!problem) return res.status(404).json({ message: "Problem not found" })
+        const problem = await Problem.findById(problemId);
+        if (!problem) return res.status(404).json({ message: "Problem not found" });
 
         const solutions = await Solution.find({ problemId, isDeleted: false })
             .populate("answeredBy", "fullName role coverImage")
             .sort({ isAccepted: -1, createdAt: -1 })
             .select("-__v")
-            .lean()
+            .lean();
 
-        const userIds = solutions.map(s => s.answeredBy._id)
+        const userIds = solutions.map(s => s.answeredBy._id);
         const repAgg = await Reputation.aggregate([
             { $match: { userId: { $in: userIds } } },
             { $group: { _id: "$userId", total: { $sum: "$points" } } }
-        ])
+        ]);
 
-        const repMap = Object.fromEntries(repAgg.map(r => [r._id.toString(), r.total]))
+        const repMap = Object.fromEntries(repAgg.map(r => [r._id.toString(), r.total]));
+
+        // Fetch all votes by this user for these solutions in one query
+        const solutionIds = solutions.map(s => s._id);
+        const userVotes = await Vote.find({ userId, solutionId: { $in: solutionIds } }).lean();
+        const voteMap = Object.fromEntries(userVotes.map(v => [v.solutionId.toString(), v.type]));
 
         const finalSolutions = solutions.map(s => ({
             ...s,
             answeredBy: {
                 ...s.answeredBy,
                 reputation: repMap[s.answeredBy._id.toString()] || 0
-            }
+            },
+            currentUserVote: voteMap[s._id.toString()] || null, // 👈 attach vote
         }));
 
         const responseData = {
@@ -227,14 +237,14 @@ const allSolutionsOfProblem = async (req, res) => {
             solutions: finalSolutions
         };
 
-        await client.setex(cacheKey, 500, JSON.stringify(responseData))
+        await client.setex(cacheKey, 500, JSON.stringify(responseData));
 
-        return res.status(200).json(responseData)
+        return res.status(200).json(responseData);
     } catch (error) {
-        console.error("Failed to fetch solutions", error)
-        return res.status(500).json({ message: "Failed to fetch solutions" })
+        console.error("Failed to fetch solutions", error);
+        return res.status(500).json({ message: "Failed to fetch solutions" });
     }
-}
+};
 
 const reportSolution = async (req, res) => {
     try {

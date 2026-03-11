@@ -15,8 +15,18 @@ connectDB();
 
 const server = http.createServer(app);
 
+// Socket.IO server attached to the same HTTP server as Express
+// CORS is aligned with the REST API so production origins (Vercel) work.
 const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
+    cors: {
+        origin: [
+            "https://impacthub-gamma.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173",
+        ],
+        methods: ["GET", "POST"],
+    },
+    transports: ["websocket", "polling"],
 });
 
 socketAuth(io);

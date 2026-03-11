@@ -25,6 +25,7 @@ const io = new Server(server, {
             "http://localhost:5173",
         ],
         methods: ["GET", "POST"],
+        credentials: true,
     },
     transports: ["websocket", "polling"],
 });
@@ -40,19 +41,43 @@ io.on("connection", (socket) => {
             const userId = socket.user._id;
 
             const problem = await Problem.findOne({ _id: problemId, isDeleted: false });
-            if (!problem) { console.log("❌ Problem not found"); return; }
-            if (problem.status === "closed") { console.log("❌ Problem is closed"); return; }
+            if (!problem) {
+                console.log("❌ Problem not found");
+                socket.emit("conversation-error", { message: "Problem not found." });
+                return;
+            }
+            if (problem.status === "closed") {
+                console.log("❌ Problem is closed");
+                socket.emit("conversation-error", { message: "This problem has been closed." });
+                return;
+            }
 
             const solution = await Solution.findById(solutionId);
-            if (!solution) { console.log("❌ Solution not found"); return; }
-            if (solution.problemId.toString() !== problemId) { console.log("❌ Solution doesn't belong to problem"); return; }
+            if (!solution) {
+                console.log("❌ Solution not found");
+                socket.emit("conversation-error", { message: "Solution not found." });
+                return;
+            }
+            if (solution.problemId.toString() !== problemId) {
+                console.log("❌ Solution doesn't belong to problem");
+                socket.emit("conversation-error", { message: "Solution does not belong to this problem." });
+                return;
+            }
 
-            if (!solution.isAccepted) { console.log("❌ Solution is NOT accepted"); return; }
+            if (!solution.isAccepted) {
+                console.log("❌ Solution is NOT accepted");
+                socket.emit("conversation-error", { message: "Chat is only available for accepted solutions." });
+                return;
+            }
 
             if (
                 problem.createdBy.toString() !== userId &&
                 solution.answeredBy.toString() !== userId
-            ) { console.log("❌ User is neither problem owner nor solution provider"); return; }
+            ) {
+                console.log("❌ User is neither problem owner nor solution provider");
+                socket.emit("conversation-error", { message: "You are not authorized for this conversation." });
+                return;
+            }
 
             const conversation = await Conversation.findOneAndUpdate(
                 { problemId, solutionId },
@@ -75,6 +100,7 @@ io.on("connection", (socket) => {
             console.log(`✅ conversation-started | conversationId: ${conversation._id}`);
         } catch (err) {
             console.error("💥 start-conversation error:", err);
+            socket.emit("conversation-error", { message: "Server error. Please try again." });
         }
     });
 
